@@ -718,11 +718,18 @@ define(function () {
 	}
 
 	//
-	// Utilities, etc.
+	// Internals, utilities, etc.
 	//
 
 	var reduceArray, slice, fcall, nextTick, handlerQueue,
 		setTimeout, funcProto, call, arrayProto, monitor, undef;
+
+	//
+	// Promise monitoring/debugging
+	//
+
+	// In case console is not defined, forcibly disable monitoring
+	monitor = typeof console != 'undefined' ? console : {};
 
 	//
 	// Shared handler queue processing
@@ -766,19 +773,30 @@ define(function () {
 		handlerQueue = [];
 	}
 
-	//
-	// Capture function and array utils
-	//
-	/*global setImmediate,process,vertx*/
-	monitor = typeof console != 'undefined' ? console : {};
-
-	// capture setTimeout to avoid being caught by fake timers used in time based tests
+	// capture setTimeout to avoid being caught by fake timers
+	// used in time based tests
 	setTimeout = global.setTimeout;
-	// Prefer setImmediate, cascade to node, vertx and finally setTimeout
-	nextTick = typeof setImmediate === 'function' ? setImmediate.bind(global)
-		: typeof process === 'object' && process.nextTick ? process.nextTick
-		: typeof vertx === 'object' ? vertx.runOnLoop // vert.x
-			: function(task) { setTimeout(task, 0); }; // fallback
+
+	// Prefer MessageChannel or setImmediate, cascade to node,
+	// vertx and finally setTimeout
+	/*global MessageChannel,setImmediate,process,vertx*/
+	if(typeof MessageChannel !== 'undefined') {
+		var channel = new MessageChannel();
+		channel.port1.onmessage = drainQueue;
+		nextTick = function() { channel.port2.postMessage(0); };
+	} else if (typeof setImmediate === 'function') {
+		nextTick = setImmediate.bind(global);
+	} else if (typeof process === 'object' && process.nextTick) {
+		nextTick = process.nextTick;
+	} else if (typeof vertx === 'object') {
+		nextTick = vertx.runOnLoop;
+	} else {
+		nextTick = function(t) { setTimeout(t, 0); };
+	}
+
+	//
+	// Capture/polyfill function and array utils
+	//
 
 	// Safe function calls
 	funcProto = Function.prototype;
