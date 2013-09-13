@@ -32,8 +32,9 @@ define(function() {
 				if(!cause) {
 					cause = rec.rejectedAt && rec.rejectedAt.stack;
 				}
-				var jumps = formatStackJumps(rec);
-				formatted.stack = stitch(rec.createdAt.stack, jumps, cause);
+
+				cause = filterStack(toArray(cause));
+				formatted.stack = [unhandledMsg].concat(reasonMsg, cause);
 			}
 
 			return formatted;
@@ -49,17 +50,6 @@ define(function() {
 			}
 
 			return jumps;
-		}
-
-		function formatStackJump(rec) {
-			return filterStack(toArray(rec.createdAt.stack).slice(1));
-		}
-
-		function stitch(escaped, jumps, rejected) {
-			escaped = filterStack(toArray(escaped)).slice(1);
-			rejected = filterStack(toArray(rejected));
-			return [unhandledMsg]
-				.concat(escaped, jumps, reasonMsg, rejected);
 		}
 
 		function toArray(stack) {

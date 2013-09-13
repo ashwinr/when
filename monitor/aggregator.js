@@ -18,20 +18,11 @@ define(function() {
 				return new PromiseStatus(parent);
 			}
 
-			var stackHolder;
-
-			try {
-				throw new Error();
-			} catch(e) {
-				stackHolder = e;
-			}
-
 			this.key = nextKey++;
 			promises[this.key] = this;
 
 			this.parent = parent;
 			this.timestamp = +(new Date());
-			this.createdAt = stackHolder;
 		}
 
 		PromiseStatus.prototype = {
@@ -53,7 +44,6 @@ define(function() {
 				var stackHolder;
 
 				if(this.key in promises) {
-
 					try {
 						throw new Error(reason && reason.message || reason);
 					} catch (e) {
